@@ -16,7 +16,6 @@ class Settings:
     admin_id: int
     model: str
     vision_model: str
-    search_model: str
     openrouter_base_url: str
     voice_dir: Path
     photo_dir: Path
@@ -39,7 +38,6 @@ def load_settings() -> Settings:
         admin_id=int(os.getenv("admin_id", "991388784")),
         model=os.getenv("AI_MODEL", "openrouter/free"),
         vision_model=os.getenv("VISION_MODEL", "openrouter/free"),
-        search_model=os.getenv("SEARCH_MODEL", "openrouter/free"),
         openrouter_base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
         voice_dir=Path(os.getenv("VOICE_DIR", BASE_DIR / "tmp" / "voices")),
         photo_dir=Path(os.getenv("PHOTO_DIR", BASE_DIR / "tmp" / "photos")),

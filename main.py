@@ -12,10 +12,10 @@ from aiogram.methods import DeleteWebhook
 from aiogram.types import Message
 from vosk import Model
 
-from aibot import aire
 from aibot.audio import transcribe_audio
 from aibot.config import load_settings
 from aibot.photoai import photo_ai
+from aibot.requestai import aire
 
 
 logging.basicConfig(

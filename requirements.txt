@@ -1,7 +1,5 @@
 vosk
 openai
-pybit
 python-dotenv
 aiofiles
 aiogram
-Flask
