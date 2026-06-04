@@ -1,30 +1,37 @@
 # AI Bot Maya
 
-Telegram bot with an OpenRouter-powered AI companion named Maya. The bot supports text messages, voice messages through Vosk speech recognition, and photo analysis through a multimodal model.
+Telegram-бот с AI-собеседницей Майей. Бот работает через OpenRouter, принимает текст, голосовые сообщения и фотографии, а также хранит историю диалога для каждого чата.
 
-## What It Does
+## Возможности
 
-- Keeps a per-chat dialogue history in memory and sends it to the model with every new message.
-- Answers with the Maya support prompt: warm, careful, non-judgmental, and safe around eating disorder, weight, health, self-harm, and medical topics.
-- Splits long replies into Telegram-safe chunks.
-- Transcribes Telegram voice messages with Vosk after converting audio through `ffmpeg`.
-- Sends photos to the configured vision model and includes the current chat history in the photo prompt.
-- Loads tokens, model names, directories, and API base URL from `keys.env`.
+- Отвечает на текстовые сообщения через модель OpenRouter.
+- Использует образ Майи: теплый, спокойный, бережный стиль общения без осуждения.
+- Поддерживает историю диалога внутри каждого Telegram-чата.
+- Разбивает длинные ответы на части, чтобы они помещались в лимиты Telegram.
+- Распознает голосовые сообщения через Vosk после конвертации аудио через `ffmpeg`.
+- Анализирует фотографии через мультимодальную модель.
+- Берет токены, модели и пути к папкам из файла `keys.env`.
 
-## Chat History
+## История чата
 
-History is supported per Telegram chat in the `users` dictionary. Every successful user/bot turn is appended as:
+История поддерживается для каждого чата отдельно в словаре `users`.
+
+После каждого успешного ответа сохраняется пара сообщений:
 
 ```text
 пользователь: ...
 майя: ...
 ```
 
-The active context is trimmed to the latest 12,000 characters to keep requests manageable. This history is in memory, so it resets when the bot process restarts. If persistent history is needed later, add a small database such as SQLite or Postgres.
+При новом запросе эта история добавляется в system prompt, поэтому бот помнит контекст текущего диалога.
 
-## Model
+Сейчас история хранится в памяти процесса и ограничивается последними `12000` символами. После перезапуска бота история сбрасывается. Если нужна постоянная история между перезапусками, можно добавить SQLite, Postgres или другое хранилище.
 
-The default model is configured through `AI_MODEL`. For Gemini 3 Flash on OpenRouter, use:
+## Модель
+
+Основная модель задается переменной `AI_MODEL`.
+
+Для Gemini 3 Flash через OpenRouter используется:
 
 ```env
 AI_MODEL=google/gemini-3-flash-preview
@@ -32,83 +39,107 @@ VISION_MODEL=google/gemini-3-flash-preview
 SEARCH_MODEL=google/gemini-3-flash-preview
 ```
 
-OpenRouter endpoint:
+Адрес OpenRouter API:
 
 ```env
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 ```
 
-## Setup
+## Установка
 
-1. Create and activate a virtual environment:
+1. Создать и активировать виртуальное окружение:
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-2. Install dependencies:
+2. Установить зависимости:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Install `ffmpeg`:
+3. Установить `ffmpeg`:
 
 ```bash
 apt install ffmpeg
 ```
 
-4. Download a Vosk model and place it at `vosk-model-small-ru-0.22`, or set `VOSK_MODEL_PATH` in `keys.env`.
+4. Скачать модель Vosk и положить ее в папку `vosk-model-small-ru-0.22`.
 
-5. Create `keys.env` from the example:
+Можно указать другой путь через переменную `VOSK_MODEL_PATH`.
+
+5. Создать файл с настройками:
 
 ```bash
 cp .env.example keys.env
 ```
 
-6. Fill in `tg_token` and `openaitoken`.
+6. Заполнить в `keys.env` Telegram token и OpenRouter API key.
 
-## Running
+## Запуск
 
 ```bash
 python main.py
 ```
 
-The bot uses long polling and drops pending webhook updates on startup.
+Бот работает через long polling и при старте сбрасывает старый webhook.
 
-## Environment Variables
+## Переменные окружения
 
-| Variable | Required | Description |
+| Переменная | Обязательная | Описание |
 | --- | --- | --- |
-| `tg_token` | yes | Telegram bot token from BotFather |
-| `openaitoken` | yes | OpenRouter API key |
-| `admin_id` | no | Telegram admin id, defaults to `991388784` |
-| `AI_MODEL` | no | Text model, defaults to `openrouter/free` |
-| `VISION_MODEL` | no | Vision model, defaults to `openrouter/free` |
-| `SEARCH_MODEL` | no | Search/helper model, defaults to `openrouter/free` |
-| `OPENROUTER_BASE_URL` | no | OpenRouter OpenAI-compatible API URL |
-| `VOICE_DIR` | no | Temporary directory for voice files |
-| `PHOTO_DIR` | no | Temporary directory for photo files |
-| `VOSK_MODEL_PATH` | no | Path to the local Vosk model |
+| `tg_token` | да | Токен Telegram-бота от BotFather |
+| `openaitoken` | да | API key OpenRouter |
+| `admin_id` | нет | Telegram ID администратора, по умолчанию `991388784` |
+| `AI_MODEL` | нет | Основная текстовая модель |
+| `VISION_MODEL` | нет | Модель для обработки изображений |
+| `SEARCH_MODEL` | нет | Модель для вспомогательных поисковых запросов |
+| `OPENROUTER_BASE_URL` | нет | OpenAI-compatible URL OpenRouter |
+| `VOICE_DIR` | нет | Папка для временных голосовых файлов |
+| `PHOTO_DIR` | нет | Папка для временных фотографий |
+| `VOSK_MODEL_PATH` | нет | Путь к локальной модели Vosk |
 
-## Deployment Notes
+## Деплой на сервере
 
-- Do not commit `keys.env`; it contains live Telegram and OpenRouter tokens.
-- Keep `venv`, `__pycache__`, `.idea`, temporary media files, and downloaded Vosk models out of git.
-- Use a process manager such as `systemd`, `pm2`, `supervisor`, or Docker to keep the bot running on a server.
-- Restart the process after changing `keys.env`.
+Рекомендуется запускать бота через `systemd`, `supervisor`, `pm2`, Docker или другой менеджер процессов.
 
-## Quick Check
+Пример логики для `systemd`:
 
-Run the lightweight tests:
+```ini
+[Unit]
+Description=AI Telegram Bot Maya
+After=network-online.target
+
+[Service]
+WorkingDirectory=/root/AIBot
+ExecStart=/root/AIBot/venv/bin/python /root/AIBot/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+После изменения `keys.env` нужно перезапустить процесс бота.
+
+## Проверка
+
+Запустить тесты:
 
 ```bash
 python -m unittest discover -s tests
 ```
 
-Run a syntax check:
+Проверить синтаксис:
 
 ```bash
 python -m compileall main.py aibot tests
 ```
+
+## Безопасность
+
+- Не коммитьте `keys.env`: в нем лежат реальные токены.
+- Не загружайте в репозиторий `.idea`, `venv`, `__pycache__`, временные медиафайлы и скачанную модель Vosk.
+- Если секрет случайно попал в git-историю, нужно удалить его из истории перед push, иначе GitHub Push Protection заблокирует загрузку.
